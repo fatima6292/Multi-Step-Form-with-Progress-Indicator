@@ -100,6 +100,52 @@ form textarea {
   resize: none;
 }
 
+/* ---------- STEP 4: Skills & Certifications ---------- */
+.form-step input[type="text"],
+.form-step input[type="file"],
+.form-step select {
+  width: 100%;
+  padding: 10px 12px;
+  margin: 6px 0 16px 0;
+  border: 1px solid #2c3e50;
+  border-radius: 10px;
+  font-size: 14px;
+  background: #1a2536;
+  color: #fff;
+  transition: 0.3s;
+}
+
+.language-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin: 10px 0 16px 0;
+}
+
+.language-group label {
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.language-group input[type="radio"] {
+  margin-right: 6px;
+  accent-color: #00eaff; /* nicer radio color */
+}
+
+#error, #resumeError {
+  color: #ff5c5c;
+  font-size: 12px;
+  margin-top: -10px;
+  margin-bottom: 10px;
+  display: block;
+}
+
+input[type="file"] {
+  padding: 5px;
+}
+
 /* ----- Phone row ----- */
 .phone-row {
   display: flex;
@@ -136,7 +182,6 @@ button:hover {
   justify-content: space-between;
   margin-top: 10px;
 }
-  
 
 /* ----- Form Step ----- */
 .form-step {
@@ -195,15 +240,6 @@ button:hover {
 .summary-box hr {
   margin: 15px 0;
   border: 0.5px solid #ffffff22;
-}
-
-/* ----- Language Options ----- */
-.language-group label {
-  display: inline-block;
-  margin-right: 15px;
-  margin-top: 5px;
-  cursor: pointer;
-  font-size: 14px;
 }
 
 /* ----- Responsive ----- */
