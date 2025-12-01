@@ -1,0 +1,286 @@
+/* ----- Global Reset ----- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background: #0a111f;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 40px 10px;
+}
+
+/* ----- Container ----- */
+.container {
+  width: 100%;
+  max-width: 600px;
+  background: #101828;
+  padding: 40px 30px;
+  border-radius: 16px;
+  box-shadow: 0 0 40px rgba(0, 234, 255, 0.2);
+}
+
+/* ----- Headings ----- */
+h2 {
+  text-align: center;
+  font-size: 28px;
+  margin-bottom: 25px;
+  color: #00eaff;
+}
+
+h3 {
+  font-size: 20px;
+  margin-bottom: 20px;
+  color: #e0e0e0;
+}
+
+/* ----- Progress Bar ----- */
+.progress-bar {
+  margin-bottom: 30px;
+}
+
+.progress-bar ul {
+  display: flex;
+  justify-content: space-between;
+  list-style: none;
+  margin-top: 12px;
+}
+
+.progress-bar li {
+  width: 20%;
+  font-size: 12px;
+  opacity: 0.5;
+  text-align: center;
+  transition: 0.3s;
+}
+
+.progress-bar li.active {
+  opacity: 1;
+  color: #00eaff;
+  font-weight: 600;
+}
+
+#progress {
+  height: 6px;
+  width: 0%;
+  background: #00eaff;
+  border-radius: 3px;
+  transition: 0.4s ease;
+}
+
+/* ----- Form Inputs ----- */
+form input,
+form select,
+form textarea {
+  width: 100%;
+  padding: 12px 15px;
+  margin: 8px 0 18px;
+  border: 1px solid #2c3e50;
+  outline: none;
+  border-radius: 10px;
+  background: #1a2536;
+  color: #fff;
+  transition: 0.3s;
+}
+
+form input:focus,
+form select:focus,
+form textarea:focus {
+  border-color: #00eaff;
+}
+
+form textarea {
+  min-height: 80px;
+  resize: none;
+}
+
+/* ---------- STEP 4: Skills & Certifications ---------- */
+.form-step input[type="text"],
+.form-step input[type="file"],
+.form-step select {
+  width: 100%;
+  padding: 10px 12px;
+  margin: 6px 0 16px 0;
+  border: 1px solid #2c3e50;
+  border-radius: 10px;
+  font-size: 14px;
+  background: #1a2536;
+  color: #fff;
+  transition: 0.3s;
+}
+
+.language-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin: 10px 0 16px 0;
+}
+
+.language-group label {
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.language-group input[type="radio"] {
+  margin-right: 6px;
+  accent-color: #00eaff; /* nicer radio color */
+}
+
+#error, #resumeError {
+  color: #ff5c5c;
+  font-size: 12px;
+  margin-top: -10px;
+  margin-bottom: 10px;
+  display: block;
+}
+
+input[type="file"] {
+  padding: 5px;
+}
+
+/* ----- Phone row ----- */
+.phone-row {
+  display: flex;
+  gap: 10px;
+}
+
+.phone-row select {
+  width: 35%;
+  height: 45px;
+  border-radius: 10px;
+  padding: 0 10px;
+}
+
+/* ----- Buttons ----- */
+button {
+  padding: 12px 25px;
+  border: none;
+  background: #00eaff;
+  color: #000;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: 0.3s;
+}
+
+button:hover {
+  background: #00bcd4;
+}
+
+/* ----- Buttons Container ----- */
+.btns {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+/* ----- Form Step ----- */
+.form-step {
+  display: none;
+  animation: fade 0.5s ease;
+}
+
+.form-step.active {
+  display: block;
+}
+
+/* Toast  */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  min-width: 250px;
+  padding: 15px 20px;
+  background-color: #333;
+  color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s, transform 0.5s;
+  z-index: 9999;
+}
+
+.toast.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-20px);
+}
+
+.toast.success { background-color: #28a745; }
+.toast.error { background-color: #dc3545; }
+
+/* ----- Fade Animation ----- */
+@keyframes fade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ----- Errors ----- */
+.general-error,
+.error {
+  color: #ff5c5c;
+  font-size: 13px;
+  margin-top: -10px;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.input-error {
+  border-color: #ff5c5c !important;
+}
+
+/* ----- Summary Box ----- */
+.summary-box {
+  background: #1a2536;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #2c3e50;
+  margin-top: 15px;
+}
+
+.summary-box p {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.summary-box p strong {
+  color: #00eaff;
+}
+
+.summary-box hr {
+  margin: 15px 0;
+  border: 0.5px solid #ffffff22;
+}
+
+/* ----- Responsive ----- */
+@media (max-width: 640px) {
+  .container {
+    padding: 30px 20px;
+  }
+  .btns {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .phone-row {
+    flex-direction: column;
+  }
+  .phone-row select {
+    width: 100%;
+  }
+}
