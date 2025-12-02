@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
-const { put, list } = require('@vercel/blob');
+const { put, list, del } = require('@vercel/blob');
 
 const app = express();
 const PORT = 3000;
@@ -31,9 +31,16 @@ async function readDataFile() {
     }
 }
 
-// Helper: Write data file
+// Helper: Write data file (with overwrite protection handled)
 async function writeDataFile(data) {
     try {
+        // Delete old file first
+        const { blobs } = await list({ prefix: DATA_FILE });
+        if (blobs.length > 0) {
+            await del(blobs[0].url);
+        }
+        
+        // Write new file
         await put(DATA_FILE, JSON.stringify(data, null, 2), {
             access: 'public',
             token: process.env.BLOB_READ_WRITE_TOKEN,
@@ -117,7 +124,7 @@ app.post('/submit', upload.single('resume'), async (req, res) => {
 app.get('/applicants', async (req, res) => {
     try {
         const applicants = await readDataFile();
-        res.json({ success: true, data: applicants });
+        res.json({ success: true, count: applicants.length, data: applicants });
     } catch (error) {
         res.json({ success: false, error: error.message });
     }
