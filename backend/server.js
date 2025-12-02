@@ -1,10 +1,8 @@
-
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-const db = require('./db'); // SQLite db.js
+const { put } = require('@vercel/blob');
+const db = require('./db');
 
 const app = express();
 const PORT = 3000;
@@ -14,33 +12,30 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Ensure uploads folder exists
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
-
-// Multer setup
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadDir),
-    filename: (req, file, cb) => {
-        cb(null, file.originalname); // temporary name; we'll rename after DB insert
-    }
-});
+// Multer setup - use memory storage instead of disk
+const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 // POST route for form submission
-app.post('/submit', upload.single('resume'), (req, res) => {
+app.post('/submit', upload.single('resume'), async (req, res) => {
     const data = req.body;
     
-    // Check duplicate email
-    db.get('SELECT * FROM applicants WHERE email = ?', [data.email], (err, row) => {
-        if (err) return res.json({ success: false, error: err.message });
+    try {
+        // Check duplicate email
+        const row = await new Promise((resolve, reject) => {
+            db.get('SELECT * FROM applicants WHERE email = ?', [data.email], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+
         if (row) return res.json({ success: false, error: 'Email already submitted' });
 
         // Insert new applicant into DB
         const query = `INSERT INTO applicants 
             (name, email, phone, dob, qualification, degree, gradYear, totalCgpa, obtainedCgpa, hasExp, companyName, jobTitle, duration, skills, language, resumeName)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-
+        
         const values = [
             data.name,
             data.email,
@@ -57,29 +52,43 @@ app.post('/submit', upload.single('resume'), (req, res) => {
             data.duration || null,
             data.skills,
             data.language,
-            null // temporary resumeName
+            null
         ];
 
-        db.run(query, values, function(err) {
-            if (err) return res.json({ success: false, error: err.message });
-
-            const userId = this.lastID; // auto-generated unique ID
-
-            // Handle resume file rename
-            let resumeName = null;
-            if (req.file) {
-                const ext = path.extname(req.file.originalname);
-                resumeName = `user${userId}${ext}`;
-                const newPath = path.join(uploadDir, resumeName);
-                fs.renameSync(req.file.path, newPath);
-
-                // Update DB with new resumeName
-                db.run('UPDATE applicants SET resumeName=? WHERE id=?', [resumeName, userId]);
-            }
-
-            return res.json({ success: true, id: userId });
+        const userId = await new Promise((resolve, reject) => {
+            db.run(query, values, function(err) {
+                if (err) reject(err);
+                else resolve(this.lastID);
+            });
         });
-    });
+
+        // Upload resume to Vercel Blob
+        let resumeUrl = null;
+        if (req.file) {
+            const ext = require('path').extname(req.file.originalname);
+            const resumeName = `user${userId}${ext}`;
+            
+            const blob = await put(resumeName, req.file.buffer, {
+                access: 'public',
+                token: process.env.BLOB_READ_WRITE_TOKEN
+            });
+            
+            resumeUrl = blob.url;
+            
+            // Update DB with resume URL
+            await new Promise((resolve, reject) => {
+                db.run('UPDATE applicants SET resumeName=? WHERE id=?', [resumeUrl, userId], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+        }
+
+        return res.json({ success: true, id: userId, resumeUrl });
+        
+    } catch (error) {
+        return res.json({ success: false, error: error.message });
+    }
 });
 
 app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
