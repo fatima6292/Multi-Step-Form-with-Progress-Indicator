@@ -31,7 +31,7 @@ async function readDataFile() {
     }
 }
 
-// Helper: Write data file (with overwrite protection handled)
+// Helper: Write data file
 async function writeDataFile(data) {
     try {
         // Delete old file first
@@ -75,11 +75,14 @@ app.post('/submit', upload.single('resume'), async (req, res) => {
         let resumeUrl = null;
         if (req.file) {
             const ext = path.extname(req.file.originalname);
-            const resumeName = `resume-user${userId}${ext}`;
+            const timestamp = Date.now();
+            const resumeName = `resume-user${userId}-${timestamp}${ext}`;
             
+            // Use addRandomSuffix OR timestamp to ensure uniqueness
             const blob = await put(resumeName, req.file.buffer, {
                 access: 'public',
-                token: process.env.BLOB_READ_WRITE_TOKEN
+                token: process.env.BLOB_READ_WRITE_TOKEN,
+                addRandomSuffix: true  // ← This makes it unique
             });
             
             resumeUrl = blob.url;
@@ -120,11 +123,26 @@ app.post('/submit', upload.single('resume'), async (req, res) => {
     }
 });
 
-// GET route to view all applicants (optional)
+// GET route to view all applicants
 app.get('/applicants', async (req, res) => {
     try {
         const applicants = await readDataFile();
         res.json({ success: true, count: applicants.length, data: applicants });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// GET route to view single applicant
+app.get('/applicants/:id', async (req, res) => {
+    try {
+        const applicants = await readDataFile();
+        const applicant = applicants.find(a => a.id === parseInt(req.params.id));
+        if (applicant) {
+            res.json({ success: true, data: applicant });
+        } else {
+            res.json({ success: false, error: 'Applicant not found' });
+        }
     } catch (error) {
         res.json({ success: false, error: error.message });
     }
