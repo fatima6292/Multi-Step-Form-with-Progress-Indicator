@@ -1,1 +1,17 @@
-node_modules/ 
+# Node modules
+backend/node_modules/
+frontend/node_modules/
+
+# Database files
+backend/formdata.db
+backend/formdata.db-journal
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build folders (if any)
+dist/
