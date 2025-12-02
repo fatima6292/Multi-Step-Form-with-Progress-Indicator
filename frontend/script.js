@@ -461,7 +461,7 @@ document.getElementById("multiForm").addEventListener("submit", async e => {
     if(resumeInput.files[0]) formData.append('resume', resumeInput.files[0]);
 
     try {
-        const res = await fetch('http://localhost:3000/submit', { method: 'POST', body: formData });
+        const res = await fetch('https://multi-step-form-with-progress-indic-peach.vercel.app/submit', { method: 'POST', body: formData });
         const data = await res.json();
         if(data.success){
             submittedMsg.style.display = "block";
