@@ -1,10 +1,10 @@
-// server.js
+
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const db = require('./db'); // your SQLite db.js
+const db = require('./db'); // SQLite db.js
 
 const app = express();
 const PORT = 3000;
