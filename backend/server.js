@@ -1,94 +1,85 @@
-const express = require('express');
-const cors = require('cors');
-const multer = require('multer');
-const { put } = require('@vercel/blob');
-const db = require('./db');
+const fs = require('fs');
+const path = require('path');
 
-const app = express();
-const PORT = 3000;
+const DATA_FILE = path.join(__dirname, 'applicants.json');
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Helper: Read data file
+function readDataFile() {
+    try {
+        if (!fs.existsSync(DATA_FILE)) {
+            fs.writeFileSync(DATA_FILE, '[]');
+        }
+        const data = fs.readFileSync(DATA_FILE, 'utf8');
+        return JSON.parse(data);
+    } catch (error) {
+        return [];
+    }
+}
 
-// Multer setup - use memory storage instead of disk
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+// Helper: Write data file
+function writeDataFile(data) {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+}
 
-// POST route for form submission
+// Then use in your routes
 app.post('/submit', upload.single('resume'), async (req, res) => {
     const data = req.body;
     
     try {
-        // Check duplicate email
-        const row = await new Promise((resolve, reject) => {
-            db.get('SELECT * FROM applicants WHERE email = ?', [data.email], (err, row) => {
-                if (err) reject(err);
-                else resolve(row);
-            });
-        });
-
-        if (row) return res.json({ success: false, error: 'Email already submitted' });
-
-        // Insert new applicant into DB
-        const query = `INSERT INTO applicants 
-            (name, email, phone, dob, qualification, degree, gradYear, totalCgpa, obtainedCgpa, hasExp, companyName, jobTitle, duration, skills, language, resumeName)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        const applicants = readDataFile();
         
-        const values = [
-            data.name,
-            data.email,
-            data.phone,
-            data.dob,
-            data.qualification,
-            data.degree,
-            data.gradYear,
-            data.totalCgpa,
-            data.obtainedCgpa,
-            data.hasExp,
-            data.companyName || null,
-            data.jobTitle || null,
-            data.duration || null,
-            data.skills,
-            data.language,
-            null
-        ];
-
-        const userId = await new Promise((resolve, reject) => {
-            db.run(query, values, function(err) {
-                if (err) reject(err);
-                else resolve(this.lastID);
-            });
-        });
-
-        // Upload resume to Vercel Blob
-        let resumeUrl = null;
-        if (req.file) {
-            const ext = require('path').extname(req.file.originalname);
-            const resumeName = `user${userId}${ext}`;
-            
-            const blob = await put(resumeName, req.file.buffer, {
-                access: 'public',
-                token: process.env.BLOB_READ_WRITE_TOKEN
-            });
-            
-            resumeUrl = blob.url;
-            
-            // Update DB with resume URL
-            await new Promise((resolve, reject) => {
-                db.run('UPDATE applicants SET resumeName=? WHERE id=?', [resumeUrl, userId], (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
-            });
+        // Check duplicate
+        const existing = applicants.find(a => a.email === data.email);
+        if (existing) {
+            return res.json({ success: false, error: 'Email already submitted' });
         }
-
-        return res.json({ success: true, id: userId, resumeUrl });
+        
+        const userId = applicants.length > 0 
+            ? Math.max(...applicants.map(a => a.id)) + 1 
+            : 1;
+        
+        // Handle resume upload (save locally for testing)
+        let resumePath = null;
+        if (req.file) {
+            const uploadDir = path.join(__dirname, 'uploads');
+            if (!fs.existsSync(uploadDir)) {
+                fs.mkdirSync(uploadDir);
+            }
+            
+            const ext = path.extname(req.file.originalname);
+            const resumeName = `user${userId}${ext}`;
+            resumePath = path.join(uploadDir, resumeName);
+            fs.writeFileSync(resumePath, req.file.buffer);
+        }
+        
+        const newApplicant = {
+            id: userId,
+            name: data.name,
+            email: data.email,
+            phone: data.phone,
+            countryCode: data.countryCode || null,
+            dob: data.dob,
+            qualification: data.qualification,
+            degree: data.degree,
+            gradYear: data.gradYear,
+            totalCgpa: data.totalCgpa,
+            obtainedCgpa: data.obtainedCgpa,
+            hasExp: data.hasExp,
+            companyName: data.companyName || null,
+            jobTitle: data.jobTitle || null,
+            duration: data.duration || null,
+            skills: data.skills,
+            language: data.language,
+            resumePath: resumePath,
+            submittedAt: new Date().toISOString()
+        };
+        
+        applicants.push(newApplicant);
+        writeDataFile(applicants);
+        
+        return res.json({ success: true, id: userId });
         
     } catch (error) {
         return res.json({ success: false, error: error.message });
     }
 });
-
-app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
