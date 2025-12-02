@@ -1,57 +1,84 @@
-const fs = require('fs');
+const express = require('express');
+const cors = require('cors');
+const multer = require('multer');
 const path = require('path');
+const { put, list } = require('@vercel/blob');
 
-const DATA_FILE = path.join(__dirname, 'applicants.json');
+const app = express();
+const PORT = 3000;
+
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+const DATA_FILE = 'applicants-data.json';
 
 // Helper: Read data file
-function readDataFile() {
+async function readDataFile() {
     try {
-        if (!fs.existsSync(DATA_FILE)) {
-            fs.writeFileSync(DATA_FILE, '[]');
+        const { blobs } = await list({ prefix: DATA_FILE });
+        if (blobs.length === 0) {
+            return [];
         }
-        const data = fs.readFileSync(DATA_FILE, 'utf8');
-        return JSON.parse(data);
+        const response = await fetch(blobs[0].url);
+        return await response.json();
     } catch (error) {
+        console.error('Read error:', error);
         return [];
     }
 }
 
 // Helper: Write data file
-function writeDataFile(data) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+async function writeDataFile(data) {
+    try {
+        await put(DATA_FILE, JSON.stringify(data, null, 2), {
+            access: 'public',
+            token: process.env.BLOB_READ_WRITE_TOKEN,
+            addRandomSuffix: false
+        });
+    } catch (error) {
+        console.error('Write error:', error);
+        throw error;
+    }
 }
 
-// Then use in your routes
+// POST route
 app.post('/submit', upload.single('resume'), async (req, res) => {
     const data = req.body;
     
     try {
-        const applicants = readDataFile();
+        // Read existing data
+        const applicants = await readDataFile();
         
-        // Check duplicate
+        // Check duplicate email
         const existing = applicants.find(a => a.email === data.email);
         if (existing) {
             return res.json({ success: false, error: 'Email already submitted' });
         }
         
+        // Generate new ID
         const userId = applicants.length > 0 
             ? Math.max(...applicants.map(a => a.id)) + 1 
             : 1;
         
-        // Handle resume upload (save locally for testing)
-        let resumePath = null;
+        // Upload resume if exists
+        let resumeUrl = null;
         if (req.file) {
-            const uploadDir = path.join(__dirname, 'uploads');
-            if (!fs.existsSync(uploadDir)) {
-                fs.mkdirSync(uploadDir);
-            }
-            
             const ext = path.extname(req.file.originalname);
-            const resumeName = `user${userId}${ext}`;
-            resumePath = path.join(uploadDir, resumeName);
-            fs.writeFileSync(resumePath, req.file.buffer);
+            const resumeName = `resume-user${userId}${ext}`;
+            
+            const blob = await put(resumeName, req.file.buffer, {
+                access: 'public',
+                token: process.env.BLOB_READ_WRITE_TOKEN
+            });
+            
+            resumeUrl = blob.url;
         }
         
+        // Create new applicant
         const newApplicant = {
             id: userId,
             name: data.name,
@@ -70,16 +97,34 @@ app.post('/submit', upload.single('resume'), async (req, res) => {
             duration: data.duration || null,
             skills: data.skills,
             language: data.language,
-            resumePath: resumePath,
+            resumeUrl: resumeUrl,
             submittedAt: new Date().toISOString()
         };
         
+        // Add to array and save
         applicants.push(newApplicant);
-        writeDataFile(applicants);
+        await writeDataFile(applicants);
         
-        return res.json({ success: true, id: userId });
+        return res.json({ success: true, id: userId, resumeUrl });
         
     } catch (error) {
+        console.error('Error:', error);
         return res.json({ success: false, error: error.message });
     }
 });
+
+// GET route to view all applicants (optional)
+app.get('/applicants', async (req, res) => {
+    try {
+        const applicants = await readDataFile();
+        res.json({ success: true, data: applicants });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+app.get('/', (req, res) => {
+    res.json({ status: 'Server is running' });
+});
+
+app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
